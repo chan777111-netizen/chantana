@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ເກມຈິກຊໍ ສະຖານທີ່ທ່ອງທ່ຽວດັງ ສປປ ລາວ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans Lao', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+            min-height: 100vh;
+            color: #f8fafc;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .piece-shadow {
+            filter: drop-shadow(0px 8px 12px rgba(0, 0, 0, 0.6));
+        }
+
+        .piece-dragging {
+            filter: drop-shadow(0px 14px 20px rgba(236, 72, 153, 0.6));
+            transform: scale(1.05);
+            z-index: 100 !important;
+        }
+
+        .pulse-crown {
+            animation: crownFloat 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes crownFloat {
+            0% { transform: translateY(0px) scale(1) rotate(-3deg); }
+            100% { transform: translateY(-12px) scale(1.08) rotate(3deg); }
+        }
+
+        .gold-glow {
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.6), 0 0 30px rgba(245, 158, 11, 0.4);
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.5);
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(168, 85, 247, 0.8);
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen justify-between overflow-x-hidden text-slate-100">
+
+    <!-- Navigation Header -->
+    <header class="w-full glass-panel border-b border-white/10 px-4 py-3 sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-2xl shadow-lg shadow-amber-500/30">
+                    🧩
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-gradient-to-r from-amber-300 via-amber-100 to-emerald-300 bg-clip-text text-transparent">
+                        ເກມຈິກຊໍ ສະຖານທີ່ທ່ອງທ່ຽວ ສປປ ລາວ
+                    </h1>
+                    <p class="text-xs text-slate-400">ທ່ອງທ່ຽວລາວ ຜ່ານເກມຕໍ່ຮູບ 6 ຊີ້ນ</p>
+                </div>
+            </div>
+
+            <!-- Header Info Bar -->
+            <div id="gameHeaderInfo" class="hidden flex items-center gap-4 flex-wrap">
+                <!-- Player Name Display -->
+                <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <span class="text-xs text-slate-400">ຜູ້ຫຼີ້ນ:</span>
+                    <span id="displayPlayerName" class="font-bold text-amber-300 text-sm"></span>
+                </div>
+
+                <!-- Timer -->
+                <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <span class="text-xs text-slate-400">ເວລາ:</span>
+                    <span id="timerDisplay" class="font-mono font-bold text-emerald-400 text-lg">05:00</span>
+                </div>
+
+                <!-- Progress Count -->
+                <div class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <span class="text-xs text-slate-400">ຄວາມຄືບໜ້າ:</span>
+                    <span id="progressDisplay" class="font-bold text-purple-300 text-sm">0/6</span>
+                </div>
+
+                <!-- Sound Toggle Button -->
+                <button id="soundToggleBtn" onclick="toggleSound()" class="p-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-all text-lg" title="ເປີດ/ປິດ ສຽງ">
+                    🔊
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Welcome / Name Modal -->
+    <div id="welcomeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div class="glass-panel p-6 sm:p-8 rounded-3xl max-w-md w-full border border-amber-500/30 text-center shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl"></div>
+            <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl"></div>
+
+            <div class="text-5xl mb-3">🇱🇦</div>
+            <h2 class="text-2xl font-extrabold mb-2 text-amber-300 gold-glow">ຍິນດີຕ້ອນຮັບເຂົ້າສູ່ເກມຈິກຊໍ!</h2>
+            <p class="text-slate-300 text-sm mb-6">ກະລຸນາປ້ອນຊື່ຂອງທ່ານ ແລະ ເລືອກສະຖານທີ່ທ່ອງທ່ຽວເພື່ອເລີ່ມຫຼີນ</p>
+
+            <form onsubmit="startGame(event)" class="space-y-4">
+                <div class="text-left">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">ຊື່ຜູ້ຫຼີ້ນ (Player Name):</label>
+                    <input type="text" id="playerNameInput" required maxlength="25" placeholder="ປ້ອນຊື່ຂອງທ່ານຢູ່ທີ່ນີ້..." 
+                           class="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-white outline-none text-sm transition-all placeholder-slate-500">
+                </div>
+
+                <div class="text-left">
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">ເລືອກສະຖານທີ່ທ່ອງທ່ຽວ (6 ຊີ້ນ):</label>
+                    <select id="landmarkSelect" class="w-full px-4 py-3 bg-slate-900/90 border border-slate-700 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-amber-200 outline-none text-sm transition-all">
+                        <option value="0">1. ພຣະທາດຫຼວງ ວຽງຈັນ (Pha That Luang)</option>
+                        <option value="1">2. ປະຕູໄຊ ວຽງຈັນ (Patuxai Monument)</option>
+                        <option value="2">3. ຕາດກວ້າງຊີ ຫຼວງພະບາງ (Kuang Si Waterfall)</option>
+                        <option value="3">4. ວັດພູ ຈຳປາສັກ (Wat Phou Heritage)</option>
+                        <option value="4">5. ວັງວຽງ ແຂວງວຽງຈັນ (Vang Vieng Karst)</option>
+                    </select>
+                </div>
+
+                <div class="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-200/90 flex items-center gap-2">
+                    <span>⏱️</span>
+                    <span>ທ່ານມີເວລາ <b>5 ນາທີ</b> ໃນການຕໍ່ຮູບຈິກຊໍ 6 ຊີ້ນໃຫ້ສຳເລັດ!</span>
+                </div>
+
+                <button type="submit" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-400 hover:to-red-400 text-slate-950 font-bold text-base shadow-lg shadow-orange-500/30 active:scale-95 transition-all cursor-pointer">
+                    🚀 ເລີ່ມຫຼີນເກມ (Start Game)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Game Container -->
+    <main class="max-w-6xl mx-auto w-full p-3 sm:p-6 flex-1 flex flex-col items-center justify-center">
+        <!-- Control Bar above Puzzle -->
+        <div id="gameControls" class="w-full flex flex-wrap justify-between items-center gap-3 mb-4 hidden">
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400">ສະຖານທີ່:</span>
+                <span id="currentLandmarkTitle" class="font-bold text-amber-300 text-sm sm:text-base"></span>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+                <!-- Hint / Preview Button -->
+                <button onclick="toggleHint()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 shadow">
+                    👁️ <span id="hintBtnText">ເບິ່ງຮູບຕົວຢ່າງ</span>
+                </button>
+
+                <!-- Reset Button -->
+                <button onclick="resetPuzzle()" class="px-3.5 py-2 bg-rose-900/60 hover:bg-rose-800/80 border border-rose-500/40 text-rose-200 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 shadow active:scale-95">
+                    🔄 ເລີ່ມໃໝ່ (Reset)
+                </button>
+
+                <!-- Change Picture Button -->
+                <button onclick="openChangePictureModal()" class="px-3.5 py-2 bg-amber-600/60 hover:bg-amber-500/80 border border-amber-400/40 text-amber-100 rounded-xl text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 shadow">
+                    🖼️ ປ່ຽນຮູບ
+                </button>
+            </div>
+        </div>
+
+        <!-- Puzzle Workspace -->
+        <div id="puzzleWorkspace" class="w-full flex flex-col lg:flex-row items-center justify-center gap-6 hidden">
+            
+            <!-- Target Board Area -->
+            <div class="relative flex flex-col items-center">
+                <div class="mb-2 text-xs text-slate-400 flex items-center gap-1">
+                    🎯 <span>ກະດານວາງຈິກຊໍ (ກົດເລືອກຈິກຊໍ ແລ້ວມາເລືອກບ່ອນວາງ - 6 ຊີ້ນ)</span>
+                </div>
+                
+                <div id="boardContainer" class="relative rounded-2xl overflow-hidden glass-panel border-2 border-amber-500/40 shadow-2xl p-2 bg-slate-950/80">
+                    <!-- Background Ghost Image for Hinting -->
+                    <canvas id="hintCanvas" class="absolute inset-2 rounded-lg opacity-20 pointer-events-none transition-opacity duration-300"></canvas>
+                    
+                    <!-- Main Interactive Board Canvas -->
+                    <div id="puzzleBoard" class="relative rounded-lg overflow-hidden bg-slate-900/60 border border-slate-800"></div>
+                </div>
+            </div>
+
+            <!-- Puzzle Pieces Tray -->
+            <div class="w-full lg:w-80 flex flex-col items-center">
+                <div class="mb-2 text-xs text-slate-400 flex items-center justify-between w-full px-1">
+                    <span>🧩 ກ່ອງເກັບຊີ້ນຈິກຊໍ (Pieces Tray)</span>
+                    <span id="trayCount" class="text-amber-400 font-semibold">6 ຊີ້ນ</span>
+                </div>
+
+                <div id="piecesTray" class="w-full h-80 lg:h-[420px] glass-panel rounded-2xl border border-slate-700/60 p-3 overflow-y-auto flex flex-wrap content-start justify-center gap-3 shadow-inner bg-slate-900/40">
+                    <!-- Dynamic piece canvases will be shuffled into here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Victory Modal with Crown -->
+    <div id="victoryModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden">
+        <div class="glass-panel p-6 sm:p-10 rounded-3xl max-w-lg w-full border-2 border-amber-400/60 text-center shadow-2xl relative overflow-hidden">
+            <!-- Background Glow Effects -->
+            <div class="absolute -top-20 -right-20 w-48 h-48 bg-amber-400/20 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-20 -left-20 w-48 h-48 bg-emerald-400/20 rounded-full blur-3xl"></div>
+
+            <!-- Crown Graphic & Animation -->
+            <div class="relative inline-block mb-3">
+                <div class="text-7xl sm:text-8xl pulse-crown filter drop-shadow-[0_10px_15px_rgba(245,158,11,0.5)]">
+                    👑
+                </div>
+                <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 text-xs font-bold bg-gradient-to-r from-amber-400 to-yellow-300 text-slate-950 px-3 py-0.5 rounded-full shadow-md uppercase tracking-wider">
+                    CHAMPION
+                </div>
+            </div>
+
+            <h2 class="text-3xl font-extrabold text-amber-300 gold-glow mb-2">
+                🎉 ຂໍສະແດງຄວາມຍິນດີ! 🎉
+            </h2>
+            <p class="text-slate-200 text-base mb-1">
+                ຜູ້ຫຼີ້ນ: <span id="victoryPlayerName" class="font-bold text-amber-300"></span>
+            </p>
+            <p class="text-slate-300 text-sm mb-6">
+                ທ່ານຕໍ່ຈິກຊໍ <b id="victoryLandmarkName" class="text-emerald-300"></b> ສຳເລັດຢ່າງງົດງາມ!
+            </p>
+
+            <!-- Stats Box -->
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3">
+                    <div class="text-xs text-slate-400">ເວລາທີ່ໃຊ້:</div>
+                    <div id="victoryTimeUsed" class="text-xl font-bold text-amber-400 font-mono">00:00</div>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-700/60 rounded-xl p-3">
+                    <div class="text-xs text-slate-400">ຄະແນນ:</div>
+                    <div class="text-xl font-bold text-emerald-400 font-mono">100 / 100 🌟</div>
+                </div>
+            </div>
+
+            <!-- Full Landmark Completed Artwork Preview Canvas -->
+            <div class="w-full h-40 rounded-xl overflow-hidden border border-amber-500/30 mb-6 relative bg-slate-950">
+                <canvas id="victoryCanvas" class="w-full h-full object-contain"></canvas>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button onclick="resetPuzzle()" class="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-slate-200 font-bold text-sm transition-all shadow">
+                    🔄 ຫຼີນຮູບນີ້ໃໝ່
+                </button>
+                <button onclick="openChangePictureModal()" class="flex-1 py-3 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-orange-500/30 transition-all active:scale-95">
+                    🗺️ ເລືອກສະຖານທີ່ອື່ນ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeout Modal -->
+    <div id="timeoutModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden">
+        <div class="glass-panel p-6 sm:p-8 rounded-3xl max-w-md w-full border border-rose-500/40 text-center shadow-2xl">
+            <div class="text-6xl mb-3">⏳</div>
+            <h2 class="text-2xl font-bold text-rose-400 mb-2">ໝົດເວລາ 5 ນາທີແລ້ວ!</h2>
+            <p class="text-slate-300 text-sm mb-6">
+                ໜ້າເສຍດາຍ, <span id="timeoutPlayerName" class="font-bold text-amber-300"></span>! ທ່ານຍັງຕໍ່ບໍ່ທັນສຳເລັດ. ລອງໃໝ່ອີກຄັ້ງ!
+            </p>
+            <div class="flex gap-3">
+                <button onclick="resetPuzzle()" class="w-full py-3 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold rounded-xl shadow-lg transition-all">
+                    🔄 ລອງຫຼີນໃໝ່ (Try Again)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full border-t border-slate-800/80 py-3 text-center text-xs text-slate-500 glass-panel mt-auto">
+        ສະຖານທີ່ທ່ອງທ່ຽວດັງ ສປປ ລາວ • ເກມຈິກຊໍ 6 ຊີ້ນ 🇱🇦
+    </footer>
+
+    <script>
+        // Sound Effects Manager using Web Audio API
+        class SoundSynth {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playPick() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(480, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playSnap() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                
+                // Tone 1
+                const osc1 = this.ctx.createOscillator();
+                const gain1 = this.ctx.createGain();
+                osc1.type = 'triangle';
+                osc1.frequency.setValueAtTime(523.25, now); // C5
+                gain1.gain.setValueAtTime(0.3, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc1.connect(gain1);
+                gain1.connect(this.ctx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.2);
+
+                // Tone 2
+                const osc2 = this.ctx.createOscillator();
+                const gain2 = this.ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(659.25, now + 0.06); // E5
+                gain2.gain.setValueAtTime(0.3, now + 0.06);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc2.connect(gain2);
+                gain2.connect(this.ctx.destination);
+                osc2.start(now + 0.06);
+                osc2.stop(now + 0.25);
+            }
+
+            playWrong() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            }
+
+            playWin() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                    
+                    gain.gain.setValueAtTime(0.3, now + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.4);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.12);
+                    osc.stop(now + idx * 0.12 + 0.4);
+                });
+            }
+
+            playTimeout() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(120, now + 0.5);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+        }
+
+        const soundSynth = new SoundSynth();
+
+        function toggleSound() {
+            soundSynth.muted = !soundSynth.muted;
+            document.getElementById('soundToggleBtn').innerText = soundSynth.muted ? '🔇' : '🔊';
+        }
+
+        // Famous Lao Tourist Attractions Artwork Generators (100% SVG/Canvas rendered)
+        const LANDMARKS = [
+            {
+                name: "ພຣະທາດຫຼວງ ວຽງຈັນ",
+                englishName: "Pha That Luang, Vientiane",
+                render: drawPhaThatLuang
+            },
+            {
+                name: "ປະຕູໄຊ ວຽງຈັນ",
+                englishName: "Patuxai Monument, Vientiane",
+                render: drawPatuxai
+            },
+            {
+                name: "ຕາດກວ້າງຊີ ຫຼວງພະບາງ",
+                englishName: "Kuang Si Waterfall, Luang Prabang",
+                render: drawKuangSi
+            },
+            {
+                name: "ວັດພູ ຈຳປາສັກ",
+                englishName: "Wat Phou, Champasak",
+                render: drawWatPhou
+            },
+            {
+                name: "ວັງວຽງ ແຂວງວຽງຈັນ",
+                englishName: "Vang Vieng Karst Landscape",
+                render: drawVangVieng
+            }
+        ];
+
+        // Canvas artwork drawing routines
+        function drawPhaThatLuang(ctx, width, height) {
+            // Sky gradient (Sunset)
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, height * 0.75);
+            skyGrad.addColorStop(0, '#0f172a');
+            skyGrad.addColorStop(0.4, '#581c87');
+            skyGrad.addColorStop(0.7, '#c2410c');
+            skyGrad.addColorStop(1, '#f59e0b');
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Sun glow
+            const sunGrad = ctx.createRadialGradient(width * 0.5, height * 0.5, 10, width * 0.5, height * 0.5, 120);
+            sunGrad.addColorStop(0, 'rgba(254, 240, 138, 0.9)');
+            sunGrad.addColorStop(0.5, 'rgba(251, 146, 60, 0.4)');
+            sunGrad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = sunGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Ground base
+            ctx.fillStyle = '#14532d';
+            ctx.fillRect(0, height * 0.78, width, height * 0.22);
+
+            // Golden Stupa Silhouette and details
+            const cx = width / 2;
+            const baseY = height * 0.78;
+
+            // Tiered base platforms
+            ctx.fillStyle = '#d97706';
+            ctx.fillRect(cx - 190, baseY - 20, 380, 20);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(cx - 160, baseY - 40, 320, 20);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fillRect(cx - 130, baseY - 65, 260, 25);
+
+            // Central golden spire structure
+            ctx.beginPath();
+            ctx.moveTo(cx - 70, baseY - 65);
+            ctx.lineTo(cx - 45, baseY - 160);
+            ctx.lineTo(cx + 45, baseY - 160);
+            ctx.lineTo(cx + 70, baseY - 65);
+            ctx.closePath();
+            ctx.fillStyle = '#fef08a';
+            ctx.fill();
+
+            // Upper spire
+            ctx.beginPath();
+            ctx.moveTo(cx - 35, baseY - 160);
+            ctx.lineTo(cx, baseY - 260);
+            ctx.lineTo(cx + 35, baseY - 160);
+            ctx.closePath();
+            ctx.fillStyle = '#facc15';
+            ctx.fill();
+
+            // Side smaller spires
+            const spires = [-110, -75, -45, 45, 75, 110];
+            spires.forEach(offset => {
+                ctx.beginPath();
+                ctx.moveTo(cx + offset - 10, baseY - 65);
+                ctx.lineTo(cx + offset, baseY - 120);
+                ctx.lineTo(cx + offset + 10, baseY - 65);
+                ctx.fillStyle = '#f59e0b';
+                ctx.fill();
+            });
+
+            // Lao Flag floating
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(cx + 140, baseY - 110, 40, 25);
+            ctx.fillStyle = '#1e3a8a';
+            ctx.fillRect(cx + 140, baseY - 102, 40, 9);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(cx + 160, baseY - 97, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawPatuxai(ctx, width, height) {
+            // Sky
+            const sky = ctx.createLinearGradient(0, 0, 0, height);
+            sky.addColorStop(0, '#0284c7');
+            sky.addColorStop(0.6, '#38bdf8');
+            sky.addColorStop(1, '#bae6fd');
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, width, height);
+
+            // Clouds
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.beginPath();
+            ctx.arc(100, 70, 30, 0, Math.PI * 2);
+            ctx.arc(130, 60, 40, 0, Math.PI * 2);
+            ctx.arc(160, 70, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Park Lawn
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(0, height * 0.72, width, height * 0.28);
+
+            // Monument Body
+            const cx = width / 2;
+            const baseY = height * 0.72;
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(cx - 140, baseY - 160, 280, 160);
+
+            // Arches
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.arc(cx, baseY, 65, Math.PI, 0, false);
+            ctx.fill();
+
+            // Side arches
+            ctx.beginPath();
+            ctx.arc(cx - 95, baseY, 30, Math.PI, 0, false);
+            ctx.arc(cx + 95, baseY, 30, Math.PI, 0, false);
+            ctx.fill();
+
+            // Traditional Lao Roof Multi-tiers
+            const tiers = [
+                { w: 290, h: 18, y: baseY - 178, color: '#b45309' },
+                { w: 230, h: 25, y: baseY - 203, color: '#f59e0b' },
+                { w: 160, h: 30, y: baseY - 233, color: '#d97706' },
+                { w: 80, h: 35, y: baseY - 268, color: '#facc15' }
+            ];
+
+            tiers.forEach(t => {
+                ctx.fillStyle = t.color;
+                ctx.fillRect(cx - t.w / 2, t.y, t.w, t.h);
+            });
+
+            // Fountain in front
+            ctx.fillStyle = '#0284c7';
+            ctx.ellipse(cx, height * 0.88, 120, 25, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#e0f2fe';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Water Jets
+            ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+            ctx.lineWidth = 2;
+            for (let i = -80; i <= 80; i += 30) {
+                ctx.beginPath();
+                ctx.moveTo(cx + i, height * 0.88);
+                ctx.quadraticCurveTo(cx + i * 0.5, height * 0.75, cx + i * 0.2, height * 0.88);
+                ctx.stroke();
+            }
+        }
+
+        function drawKuangSi(ctx, width, height) {
+            // Jungle background
+            const jungle = ctx.createLinearGradient(0, 0, 0, height);
+            jungle.addColorStop(0, '#064e3b');
+            jungle.addColorStop(0.5, '#047857');
+            jungle.addColorStop(1, '#0f766e');
+            ctx.fillStyle = jungle;
+            ctx.fillRect(0, 0, width, height);
+
+            // Foliage shapes
+            ctx.fillStyle = '#022c22';
+            for (let i = 0; i < width; i += 40) {
+                ctx.beginPath();
+                ctx.arc(i, 40, 50, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Waterfall Cascades
+            const cx = width / 2;
+            
+            // Limestone Rock Formations
+            ctx.fillStyle = '#78716c';
+            ctx.beginPath();
+            ctx.moveTo(0, height * 0.4);
+            ctx.lineTo(width, height * 0.35);
+            ctx.lineTo(width, height);
+            ctx.lineTo(0, height);
+            ctx.fill();
+
+            // Turquoise Water Pools
+            const poolGrad = ctx.createLinearGradient(0, height * 0.4, 0, height);
+            poolGrad.addColorStop(0, '#2dd4bf');
+            poolGrad.addColorStop(0.5, '#06b6d4');
+            poolGrad.addColorStop(1, '#0891b2');
+
+            // Tier 1 Pool
+            ctx.fillStyle = poolGrad;
+            ctx.beginPath();
+            ctx.ellipse(cx, height * 0.5, 220, 40, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Tier 2 Pool
+            ctx.beginPath();
+            ctx.ellipse(cx, height * 0.78, 280, 60, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // White Water Cascades
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.beginPath();
+            ctx.moveTo(cx - 60, height * 0.15);
+            ctx.lineTo(cx + 60, height * 0.15);
+            ctx.lineTo(cx + 90, height * 0.48);
+            ctx.lineTo(cx - 90, height * 0.48);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(cx - 110, height * 0.52);
+            ctx.lineTo(cx + 110, height * 0.52);
+            ctx.lineTo(cx + 140, height * 0.74);
+            ctx.lineTo(cx - 140, height * 0.74);
+            ctx.fill();
+
+            // Tropical Trees Overlay
+            ctx.fillStyle = '#15803d';
+            ctx.beginPath();
+            ctx.arc(50, height * 0.3, 60, 0, Math.PI * 2);
+            ctx.arc(width - 50, height * 0.3, 70, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawWatPhou(ctx, width, height) {
+            // Mountain Background (Phu Kao)
+            const sky = ctx.createLinearGradient(0, 0, 0, height);
+            sky.addColorStop(0, '#38bdf8');
+            sky.addColorStop(0.5, '#fef08a');
+            sky.addColorStop(1, '#b45309');
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, width, height);
+
+            // Sacred Mountain Peak
+            ctx.fillStyle = '#3f6212';
+            ctx.beginPath();
+            ctx.moveTo(50, height * 0.6);
+            ctx.lineTo(width * 0.4, height * 0.12);
+            ctx.lineTo(width * 0.85, height * 0.6);
+            ctx.fill();
+
+            // Foreground Terrace & Ancient Temple
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(0, height * 0.6, width, height * 0.4);
+
+            // Ancient Stone Ruins
+            const cx = width / 2;
+            const baseY = height * 0.72;
+
+            ctx.fillStyle = '#44403c';
+            ctx.fillRect(cx - 120, baseY - 70, 240, 70);
+
+            // Pillars
+            for (let x = cx - 100; x <= cx + 100; x += 30) {
+                ctx.fillStyle = '#292524';
+                ctx.fillRect(x - 6, baseY - 60, 12, 60);
+            }
+
+            // Triangular Pediment
+            ctx.beginPath();
+            ctx.moveTo(cx - 130, baseY - 70);
+            ctx.lineTo(cx, baseY - 120);
+            ctx.lineTo(cx + 130, baseY - 70);
+            ctx.fillStyle = '#57534e';
+            ctx.fill();
+
+            // Dok Champa Trees (Frangipani)
+            ctx.fillStyle = '#166534';
+            ctx.beginPath();
+            ctx.arc(80, baseY - 30, 35, 0, Math.PI * 2);
+            ctx.arc(width - 80, baseY - 30, 35, 0, Math.PI * 2);
+            ctx.fill();
+
+            // White Champa Flowers
+            ctx.fillStyle = '#ffffff';
+            [ {x:70, y:baseY-40}, {x:95, y:baseY-25}, {x:width-90, y:baseY-35} ].forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawVangVieng(ctx, width, height) {
+            // Sunrise Sky
+            const sky = ctx.createLinearGradient(0, 0, 0, height);
+            sky.addColorStop(0, '#f43f5e');
+            sky.addColorStop(0.4, '#fb923c');
+            sky.addColorStop(0.8, '#fef08a');
+            sky.addColorStop(1, '#38bdf8');
+            ctx.fillStyle = sky;
+            ctx.fillRect(0, 0, width, height);
+
+            // Hot Air Balloons
+            ctx.fillStyle = '#e11d48';
+            ctx.beginPath();
+            ctx.arc(100, 70, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(width - 120, 110, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Karst Mountains Layer 1
+            ctx.fillStyle = '#475569';
+            ctx.beginPath();
+            ctx.moveTo(0, height * 0.65);
+            ctx.lineTo(120, height * 0.25);
+            ctx.lineTo(260, height * 0.65);
+            ctx.lineTo(400, height * 0.3);
+            ctx.lineTo(width, height * 0.65);
+            ctx.lineTo(width, height);
+            ctx.lineTo(0, height);
+            ctx.fill();
+
+            // Nam Song River
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(0, height * 0.65, width, height * 0.35);
+
+            // Reflection on river
+            const ref = ctx.createLinearGradient(0, height * 0.65, 0, height);
+            ref.addColorStop(0, 'rgba(251, 146, 60, 0.4)');
+            ref.addColorStop(1, 'rgba(2, 132, 199, 0.8)');
+            ctx.fillStyle = ref;
+            ctx.fillRect(0, height * 0.65, width, height * 0.35);
+
+            // Longtail Boat Silhouette
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.ellipse(width * 0.6, height * 0.82, 45, 8, -0.1, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Game State Variables
+        const COLS = 3;
+        const ROWS = 2;
+        const TOTAL_PIECES = COLS * ROWS; // Exactly 6 pieces!
+        
+        let boardWidth = 600;
+        let boardHeight = 360;
+        let pieceWidth = boardWidth / COLS;   // 200px
+        let pieceHeight = boardHeight / ROWS; // 180px
+
+        let currentPlayerName = "";
+        let selectedLandmarkIdx = 0;
+        let timerInterval = null;
+        let timeRemaining = 300; // 5 minutes (300 seconds)
+        let timeElapsed = 0;
+        let piecesPlaced = 0;
+        let showHintState = false;
+
+        let puzzleGrid = []; // holds metadata for 6 pieces
+        let horizontalTabs = [];
+        let verticalTabs = [];
+
+        let selectedPiece = null; // Currently selected piece for tap-to-place
+
+        // Offscreen canvas for full rendered image
+        const masterCanvas = document.createElement('canvas');
+        masterCanvas.width = boardWidth;
+        masterCanvas.height = boardHeight;
+        const masterCtx = masterCanvas.getContext('2d');
+
+        // Initialize Game Entry
+        function startGame(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('playerNameInput');
+            if (!input.value.trim()) {
+                alert('ກະລຸນາປ້ອນຊື່ຂອງທ່ານກ່ອນ!');
+                return;
+            }
+
+            currentPlayerName = input.value.trim();
+            selectedLandmarkIdx = parseInt(document.getElementById('landmarkSelect').value);
+
+            // UI updates
+            document.getElementById('welcomeModal').classList.add('hidden');
+            document.getElementById('gameHeaderInfo').classList.remove('hidden');
+            document.getElementById('gameControls').classList.remove('hidden');
+            document.getElementById('puzzleWorkspace').classList.remove('hidden');
+            document.getElementById('displayPlayerName').innerText = currentPlayerName;
+
+            soundSynth.init();
+            initPuzzle();
+        }
+
+        function openChangePictureModal() {
+            clearInterval(timerInterval);
+            document.getElementById('victoryModal').classList.add('hidden');
+            document.getElementById('timeoutModal').classList.add('hidden');
+            document.getElementById('welcomeModal').classList.remove('hidden');
+        }
+
+        function generateTabEdges() {
+            // Generate tab orientations (-1, 0, or 1) for interconnecting tabs
+            horizontalTabs = Array(ROWS + 1).fill(0).map(() => Array(COLS).fill(0));
+            verticalTabs = Array(ROWS).fill(0).map(() => Array(COLS + 1).fill(0));
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (r < ROWS - 1) {
+                        horizontalTabs[r + 1][c] = Math.random() < 0.5 ? 1 : -1;
+                    }
+                    if (c < COLS - 1) {
+                        verticalTabs[r][c + 1] = Math.random() < 0.5 ? 1 : -1;
+                    }
+                }
+            }
+        }
+
+        function drawPieceClipPath(ctx, x, y, w, h, top, right, bottom, left) {
+            const tabSize = Math.min(w, h) * 0.22;
+            
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+
+            // Top edge
+            if (top !== 0) {
+                ctx.lineTo(x + w * 0.35, y);
+                ctx.bezierCurveTo(x + w * 0.35, y - top * tabSize, x + w * 0.65, y - top * tabSize, x + w * 0.65, y);
+            }
+            ctx.lineTo(x + w, y);
+
+            // Right edge
+            if (right !== 0) {
+                ctx.lineTo(x + w, y + h * 0.35);
+                ctx.bezierCurveTo(x + w + right * tabSize, y + h * 0.35, x + w + right * tabSize, y + h * 0.65, x + w, y + h * 0.65);
+            }
+            ctx.lineTo(x + w, y + h);
+
+            // Bottom edge
+            if (bottom !== 0) {
+                ctx.lineTo(x + w * 0.65, y + h);
+                ctx.bezierCurveTo(x + w * 0.65, y + h + bottom * tabSize, x + w * 0.35, y + h + bottom * tabSize, x + w * 0.35, y + h);
+            }
+            ctx.lineTo(x, y + h);
+
+            // Left edge
+            if (left !== 0) {
+                ctx.lineTo(x, y + h * 0.65);
+                ctx.bezierCurveTo(x - left * tabSize, y + h * 0.65, x - left * tabSize, y + h * 0.35, x, y + h * 0.35);
+            }
+            ctx.lineTo(x, y);
+            ctx.closePath();
+        }
+
+        function initPuzzle() {
+            clearInterval(timerInterval);
+            timeRemaining = 300;
+            timeElapsed = 0;
+            piecesPlaced = 0;
+            selectedPiece = null;
+            updateTimerDisplay();
+            updateProgressDisplay();
+
+            const landmark = LANDMARKS[selectedLandmarkIdx];
+            document.getElementById('currentLandmarkTitle').innerText = landmark.name;
+
+            // Render Full Artwork on Master Canvas
+            masterCtx.clearRect(0, 0, boardWidth, boardHeight);
+            landmark.render(masterCtx, boardWidth, boardHeight);
+
+            // Draw Background Hint Canvas
+            const hintCanvas = document.getElementById('hintCanvas');
+            hintCanvas.width = boardWidth;
+            hintCanvas.height = boardHeight;
+            const hintCtx = hintCanvas.getContext('2d');
+            hintCtx.clearRect(0, 0, boardWidth, boardHeight);
+            hintCtx.drawImage(masterCanvas, 0, 0);
+
+            // Generate Jigsaw Pieces
+            generateTabEdges();
+            setupBoardGrid();
+            createPieceCanvases();
+
+            // Start Timer
+            timerInterval = setInterval(handleTimerTick, 1000);
+        }
+
+        function setupBoardGrid() {
+            const board = document.getElementById('puzzleBoard');
+            board.style.width = boardWidth + 'px';
+            board.style.height = boardHeight + 'px';
+            board.innerHTML = '';
+
+            // Create Grid Drop Slots
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const slot = document.createElement('div');
+                    slot.id = `slot-${r}-${c}`;
+                    slot.className = 'absolute border-2 border-dashed border-amber-400/30 hover:border-amber-400/80 hover:bg-amber-400/10 cursor-pointer rounded-lg transition-all flex items-center justify-center';
+                    slot.style.width = pieceWidth + 'px';
+                    slot.style.height = pieceHeight + 'px';
+                    slot.style.left = (c * pieceWidth) + 'px';
+                    slot.style.top = (r * pieceHeight) + 'px';
+
+                    // Slot label
+                    const label = document.createElement('span');
+                    label.className = 'text-amber-300/30 text-xs font-bold pointer-events-none';
+                    label.innerText = `ບ່ອນທີ ${r * COLS + c + 1}`;
+                    slot.appendChild(label);
+
+                    // Handle slot click to place selected piece
+                    slot.addEventListener('click', () => placeSelectedPieceToSlot(r, c));
+                    board.appendChild(slot);
+                }
+            }
+        }
+
+        function selectPiece(piece) {
+            if (piece.placed) return;
+
+            // Deselect previous piece visual
+            if (selectedPiece && selectedPiece !== piece) {
+                selectedPiece.canvas.classList.remove('ring-4', 'ring-amber-400', 'scale-105');
+            }
+
+            if (selectedPiece === piece) {
+                // Unselect if clicked again
+                selectedPiece.canvas.classList.remove('ring-4', 'ring-amber-400', 'scale-105');
+                selectedPiece = null;
+            } else {
+                selectedPiece = piece;
+                selectedPiece.canvas.classList.add('ring-4', 'ring-amber-400', 'scale-105');
+                soundSynth.playPick();
+            }
+        }
+
+        function placeSelectedPieceToSlot(r, c) {
+            if (!selectedPiece) return;
+
+            if (selectedPiece.row === r && selectedPiece.col === c) {
+                // Correct slot!
+                const piece = selectedPiece;
+                piece.placed = true;
+                piecesPlaced++;
+                soundSynth.playSnap();
+
+                piece.canvas.classList.remove('ring-4', 'ring-amber-400', 'scale-105', 'cursor-pointer');
+                piece.canvas.classList.add('cursor-default');
+
+                // Snap canvas inside board slot
+                piece.canvas.style.position = 'absolute';
+                piece.canvas.style.left = (piece.targetX - piece.padding) + 'px';
+                piece.canvas.style.top = (piece.targetY - piece.padding) + 'px';
+                piece.canvas.style.zIndex = '10';
+
+                const board = document.getElementById('puzzleBoard');
+                board.appendChild(piece.canvas);
+
+                selectedPiece = null;
+                updateProgressDisplay();
+
+                if (piecesPlaced === TOTAL_PIECES) {
+                    handleVictory();
+                }
+            } else {
+                // Incorrect slot position feedback
+                soundSynth.playWrong();
+                const slot = document.getElementById(`slot-${r}-${c}`);
+                if (slot) {
+                    slot.classList.add('bg-rose-500/30', 'border-rose-400');
+                    setTimeout(() => {
+                        slot.classList.remove('bg-rose-500/30', 'border-rose-400');
+                    }, 300);
+                }
+            }
+        }
+
+        function createPieceCanvases() {
+            const tray = document.getElementById('piecesTray');
+            tray.innerHTML = '';
+            puzzleGrid = [];
+
+            let pieceList = [];
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const id = r * COLS + c;
+
+                    const top = horizontalTabs[r][c];
+                    const right = verticalTabs[r][c + 1];
+                    const bottom = horizontalTabs[r + 1][c];
+                    const left = verticalTabs[r][c];
+
+                    const padding = 25; // Margin to fit extruding tabs
+                    const canvas = document.createElement('canvas');
+                    canvas.width = pieceWidth + padding * 2;
+                    canvas.height = pieceHeight + padding * 2;
+                    canvas.className = 'cursor-pointer piece-shadow hover:scale-105 transition-all duration-150 rounded-lg';
+                    canvas.style.touchAction = 'none';
+
+                    const pCtx = canvas.getContext('2d');
+
+                    // Draw jigsaw piece cutout
+                    pCtx.save();
+                    pCtx.translate(padding, padding);
+                    drawPieceClipPath(pCtx, 0, 0, pieceWidth, pieceHeight, top, right, bottom, left);
+                    pCtx.clip();
+
+                    // Draw image subset
+                    pCtx.drawImage(
+                        masterCanvas,
+                        c * pieceWidth, r * pieceHeight, pieceWidth, pieceHeight,
+                        0, 0, pieceWidth, pieceHeight
+                    );
+
+                    // Stroke border for crisp detail
+                    pCtx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                    pCtx.lineWidth = 2;
+                    pCtx.stroke();
+                    pCtx.restore();
+
+                    const pieceData = {
+                        id: id,
+                        row: r,
+                        col: c,
+                        targetX: c * pieceWidth,
+                        targetY: r * pieceHeight,
+                        canvas: canvas,
+                        padding: padding,
+                        placed: false
+                    };
+
+                    attachPieceEvents(pieceData);
+                    pieceList.push(pieceData);
+                }
+            }
+
+            // Shuffle pieces randomly
+            pieceList.sort(() => Math.random() - 0.5);
+
+            pieceList.forEach(p => {
+                tray.appendChild(p.canvas);
+                puzzleGrid.push(p);
+            });
+        }
+
+        function attachPieceEvents(piece) {
+            const canvas = piece.canvas;
+
+            // Primary tap/click to select piece
+            canvas.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectPiece(piece);
+            });
+        }
+
+        function attachDragEvents(piece) {
+            const canvas = piece.canvas;
+            let isDragging = false;
+            let startX, startY;
+            let originalLeft, originalTop;
+
+            function onPointerDown(e) {
+                if (piece.placed) return;
+                
+                soundSynth.playPick();
+                isDragging = true;
+                canvas.classList.add('piece-dragging');
+
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                startX = clientX;
+                startY = clientY;
+
+                // Move canvas to body root for smooth absolute dragging
+                const rect = canvas.getBoundingClientRect();
+                originalLeft = rect.left;
+                originalTop = rect.top;
+
+                canvas.style.position = 'fixed';
+                canvas.style.left = rect.left + 'px';
+                canvas.style.top = rect.top + 'px';
+                canvas.style.zIndex = '1000';
+                document.body.appendChild(canvas);
+
+                window.addEventListener('mousemove', onPointerMove);
+                window.addEventListener('mouseup', onPointerUp);
+                window.addEventListener('touchmove', onPointerMove, { passive: false });
+                window.addEventListener('touchend', onPointerUp);
+            }
+
+            function onPointerMove(e) {
+                if (!isDragging) return;
+                if (e.cancelable) e.preventDefault();
+
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                const dx = clientX - startX;
+                const dy = clientY - startY;
+
+                canvas.style.left = (originalLeft + dx) + 'px';
+                canvas.style.top = (originalTop + dy) + 'px';
+            }
+
+            function onPointerUp(e) {
+                if (!isDragging) return;
+                isDragging = false;
+                canvas.classList.remove('piece-dragging');
+
+                window.removeEventListener('mousemove', onPointerMove);
+                window.removeEventListener('mouseup', onPointerUp);
+                window.removeEventListener('touchmove', onPointerMove);
+                window.removeEventListener('touchend', onPointerUp);
+
+                // Check Snap onto Board
+                const board = document.getElementById('puzzleBoard');
+                const boardRect = board.getBoundingClientRect();
+                const pieceRect = canvas.getBoundingClientRect();
+
+                // Target position relative to board
+                const pieceCenterX = pieceRect.left + pieceRect.width / 2 - piece.padding;
+                const pieceCenterY = pieceRect.top + pieceRect.height / 2 - piece.padding;
+
+                const targetAbsX = boardRect.left + piece.targetX + pieceWidth / 2;
+                const targetAbsY = boardRect.top + piece.targetY + pieceHeight / 2;
+
+                const distance = Math.hypot(pieceCenterX - targetAbsX, pieceCenterY - targetAbsY);
+
+                if (distance < 45) { // Snap threshold distance
+                    // Successful Snap!
+                    piece.placed = true;
+                    piecesPlaced++;
+                    soundSynth.playSnap();
+
+                    // Snap canvas inside board
+                    canvas.style.position = 'absolute';
+                    canvas.style.left = (piece.targetX - piece.padding) + 'px';
+                    canvas.style.top = (piece.targetY - piece.padding) + 'px';
+                    canvas.style.zIndex = '10';
+                    canvas.classList.remove('cursor-grab', 'active:cursor-grabbing');
+                    canvas.classList.add('cursor-default');
+
+                    board.appendChild(canvas);
+
+                    updateProgressDisplay();
+
+                    if (piecesPlaced === TOTAL_PIECES) {
+                        handleVictory();
+                    }
+                } else {
+                    // Return piece back to tray
+                    document.getElementById('piecesTray').appendChild(canvas);
+                    canvas.style.position = 'relative';
+                    canvas.style.left = '0px';
+                    canvas.style.top = '0px';
+                    canvas.style.zIndex = '1';
+                }
+            }
+
+            canvas.addEventListener('mousedown', onPointerDown);
+            canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+        }
+
+        function handleTimerTick() {
+            timeRemaining--;
+            timeElapsed++;
+            updateTimerDisplay();
+
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                soundSynth.playTimeout();
+                document.getElementById('timeoutPlayerName').innerText = currentPlayerName;
+                document.getElementById('timeoutModal').classList.remove('hidden');
+            }
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
+            const secs = (timeRemaining % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').innerText = `${mins}:${secs}`;
+        }
+
+        function updateProgressDisplay() {
+            document.getElementById('progressDisplay').innerText = `${piecesPlaced}/${TOTAL_PIECES}`;
+            document.getElementById('trayCount').innerText = `${TOTAL_PIECES - piecesPlaced} ຊີ້ນ`;
+        }
+
+        function toggleHint() {
+            showHintState = !showHintState;
+            const hintCanvas = document.getElementById('hintCanvas');
+            hintCanvas.style.opacity = showHintState ? '0.65' : '0.2';
+            document.getElementById('hintBtnText').innerText = showHintState ? 'ຊ່ອນຮູບຕົວຢ່າງ' : 'ເບິ່ງຮູບຕົວຢ່າງ';
+        }
+
+        function resetPuzzle() {
+            document.getElementById('victoryModal').classList.add('hidden');
+            document.getElementById('timeoutModal').classList.add('hidden');
+            initPuzzle();
+        }
+
+        function handleVictory() {
+            clearInterval(timerInterval);
+            soundSynth.playWin();
+
+            // Trigger Fireworks / Confetti
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 120,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+            }
+
+            // Copy finished artwork to victory canvas preview
+            const victoryCanvas = document.getElementById('victoryCanvas');
+            victoryCanvas.width = boardWidth;
+            victoryCanvas.height = boardHeight;
+            const vCtx = victoryCanvas.getContext('2d');
+            vCtx.drawImage(masterCanvas, 0, 0);
+
+            // Format time used
+            const minsUsed = Math.floor(timeElapsed / 60).toString().padStart(2, '0');
+            const secsUsed = (timeElapsed % 60).toString().padStart(2, '0');
+
+            document.getElementById('victoryPlayerName').innerText = currentPlayerName;
+            document.getElementById('victoryLandmarkName').innerText = LANDMARKS[selectedLandmarkIdx].name;
+            document.getElementById('victoryTimeUsed').innerText = `${minsUsed}:${secsUsed}`;
+
+            // Show Victory Modal with Crown
+            document.getElementById('victoryModal').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
